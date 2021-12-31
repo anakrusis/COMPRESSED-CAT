@@ -1270,13 +1270,13 @@ StartLCD:
     ; Turns on LCD with reasonable settings (with 8x16 sprites!)
     ; It makes the background map be at $9800-$9BFF, while the window (which is off) be at $9C00-9FFF, which
     ; is consistent with the definitions of BACKGROUND_MAPDATA_START and WINDOW_MAPDATA_START
-    ld	a, LCDCF_ON|LCDCF_BG8000|LCDCF_BG9800|LCDCF_BGON|LCDCF_OBJ16|LCDCF_OBJON|LCDCF_WIN9C00|LCDCF_WINOFF
+    ld	a, LCDCF_ON|LCDCF_BG8000|LCDCF_BG9800|LCDCF_BGON|LCDCF_OBJ8|LCDCF_OBJON|LCDCF_WIN9C00|LCDCF_WINOFF
 	ld	[rLCDC], a
     ret
 
 TurnOnWindow:
     ; Same as StartLCD except the window is on. Turn it off by calling StartLCD (which doesn't hurt calling even when the LCD is already on)
-    ld	a, LCDCF_ON|LCDCF_BG8000|LCDCF_BG9800|LCDCF_BGON|LCDCF_OBJ16|LCDCF_OBJON|LCDCF_WIN9C00|LCDCF_WINON
+    ld	a, LCDCF_ON|LCDCF_BG8000|LCDCF_BG9800|LCDCF_BGON|LCDCF_OBJ8|LCDCF_OBJON|LCDCF_WIN9C00|LCDCF_WINON
 	ld	[rLCDC], a
     ret
 

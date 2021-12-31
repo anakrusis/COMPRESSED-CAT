@@ -31,7 +31,6 @@ waitVblank:
 	ld b, $ff
 clrmem:
 	
-	
 	dec b
 	jp z,clrmem
 
