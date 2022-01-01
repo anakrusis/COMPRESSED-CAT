@@ -10,7 +10,7 @@ funtusEnd:
 INCLUDE "gingerbread.asm"
 
 SECTION "vars", WRAM0[USER_RAM_START]
-spriteDrawCount: ds 1 ; how many sprites have been drawned per frame
+spritesDrawnCount: ds 1 ; how many sprites have been drawned in this frame
 	
 SECTION "start", ROM0
 begin:
@@ -33,10 +33,27 @@ forever:
 	nop
 	jp forever
 	
-; tile in a
+; tile index in d
 ; x and y in b/c
 drawSprite:
+	; high byte of address always starts at c1xx
+	ld h, $c1
+	; low byte of address is 4 * spritesDrawnCount
+	ld a, [spritesDrawnCount]
+	sla a
+	sla a
+	ld l, a
 	
+	ld [hl], c   ; sprite y
+	inc hl
+	ld [hl], b   ; sprite x
+	inc hl
+	ld [hl], d   ; tile index
+	inc hl
+	ld [hl], $00 ; flags
+	
+	ld hl, spritesDrawnCount
+	inc [hl]
 	
 	ret
 	
@@ -59,10 +76,11 @@ clearNametableDone:
 fillSprites:
 allSpritesOffscreen:
 	ld a, $00
-	ld hl, spriteDrawCount
+	ld hl, spritesDrawnCount
 	ld [hl], a
 
 	; iterates from c100 to c19f and clears all the sprite table
+	; TODO this can be rewritten a bit faster due to oam having the nicely aligned start index 
 	ld b, $a0
 	ld hl, $c100
 allSpritesOffscreenLoop:
@@ -71,10 +89,9 @@ allSpritesOffscreenLoop:
 	dec b
 	jp nz, allSpritesOffscreenLoop
 	
-	ret
+	ld bc, $8080
+	ld d,  $10
+	call drawSprite
+	call drawSprite
 	
-	;pop hl
-	;pop de
-	;pop bc
-	;pop af
-	;ret
+	ret
