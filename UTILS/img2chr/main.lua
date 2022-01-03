@@ -38,14 +38,33 @@ function love.keypressed(key)
 end
 
 function optimiseImage()
-	-- for each tile, iterates through all the tiles before it and looks for exact matches. 
-	-- marks them for consolidation if matching
+	-- FIRST PASS: for each tile, iterates through all the tiles before it and looks for exact matches. 
+	-- marks it for consolidation if it finds a match
 	for i = 2, #tiles do
 		for j = 1, (i - 1) do
 			if tiles[i]:isEqual( tiles[j] ) then
 				tiles[i].markedForConsolidation = true;
+				tilemap[i] = tilemap[j];
 			end
 		end
+	end
+	
+	-- SECOND PASS: splicing out the tiles that are redundant
+	local i = 1;
+	while i <= #tiles do
+		if tiles[i].markedForConsolidation then
+			table.remove(tiles,i);
+			i = i - 1;
+			
+			-- (Oh god this is going to be slow)
+			-- every single tile who's index come after wards will have to be decremented
+			for j = 1, #tilemap do
+				if tilemap[j] > i then
+					tilemap[j] = tilemap[j] - 1;
+				end
+			end
+		end
+		i = i + 1;
 	end
 end
 
@@ -55,14 +74,17 @@ function tileImage()
 	widthInTiles  = math.ceil(imageData:getWidth() / 8);
 	heightInTiles = math.ceil(imageData:getHeight() / 8);
 	
-	-- generates tileset
-	for x = 0, widthInTiles - 1 do
-		for y = 0, heightInTiles - 1 do
+	-- generates tileset and tilemap
+	local index = 1;
+	for y = 0, heightInTiles - 1 do
+		for x = 0, widthInTiles - 1 do
 			
 			local currtile = Tile:new(); currtile.x = x; currtile.y = y;
 			table.insert(tiles, currtile);
 			currtile:putData();
 			
+			table.insert(tilemap, index)
+			index = index + 1;
 		end
 	end
 end
@@ -146,15 +168,32 @@ function love.draw()
 	-- end
 	
 	-- RENDER TILESET:
-	for i = 1, #tiles do
-		local t = tiles[i];
-		local sx = t.x * 8; local sy = t.y * 8;
-		for j = 1, 64 do
+	-- for i = 1, #tiles do
+		-- local t = tiles[i];
+		-- --local sx = ((i - 1) % 16) * 8; local sy = math.floor((i - 1) / 16) * 8;
+		-- local sx = t.x * 8; local sy = t.y * 8;
+		-- for j = 1, 64 do
 			
-			local cx = sx + ((j - 1) % 8); local cy = sy + math.floor((j - 1) / 8);
-			local p = t.data[j];
-			love.graphics.setColor(p/3,p/3,p/3)
-			love.graphics.rectangle("fill",cx,cy,1,1)
+			-- local cx = sx + ((j - 1) % 8); local cy = sy + math.floor((j - 1) / 8);
+			-- local p = t.data[j];
+			-- love.graphics.setColor(p/3,p/3,p/3)
+			-- love.graphics.rectangle("fill",cx,cy,1,1)
+		-- end
+	-- end
+	
+	-- RENDER TILEMAP:
+	for i = 1, #tilemap do
+		local t = tiles[ tilemap[i] ];
+		if t then
+			local sx = ((i - 1) % widthInTiles) * 8; local sy = math.floor((i - 1) / widthInTiles) * 8;
+			--local sx = t.x * 8; local sy = t.y * 8;
+			for j = 1, 64 do
+				
+				local cx = sx + ((j - 1) % 8); local cy = sy + math.floor((j - 1) / 8);
+				local p = t.data[j];
+				love.graphics.setColor(p/3,p/3,p/3)
+				love.graphics.rectangle("fill",cx,cy,1,1)
+			end
 		end
 	end
 	
