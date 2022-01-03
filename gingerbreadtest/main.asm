@@ -1,7 +1,7 @@
 SECTION "Includes@home",ROM0
 
-ROM_SIZE EQU 1 
-RAM_SIZE EQU 1
+ROM_SIZE EQU 0 
+RAM_SIZE EQU 0
 
 funtus:
 INCBIN "funtus.chr"
@@ -41,9 +41,6 @@ begin:
 	ld [SPRITE_PALETTE_1], a
 	
 frame:
-	; graphic stuff must happen first while we still in vblank
-	call fillSprites
-	
 stepTxtPtr:
 	ld hl, globalTimer
 	inc [hl]
@@ -55,6 +52,7 @@ stepTxtPtr:
 	inc [hl]
 	
 stepTxtPtrDone:
+	call fillSprites
 	
 	halt
 	nop
