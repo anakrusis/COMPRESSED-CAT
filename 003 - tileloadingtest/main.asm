@@ -80,7 +80,7 @@ begin:
 	ld a, %00011011
 	ld [BG_PALETTE], a
 	
-	ld a, %000001111
+	ld a, %00101111
 	ld [SPRITE_PALETTE_1], a
 	
 frame:
@@ -174,6 +174,22 @@ allSpritesOffscreenLoop:
 	ld [hli], a
 	dec b
 	jp nz, allSpritesOffscreenLoop
+	
+	ld a, [globalTimer]
+	and $2f
+	sub $06
+	jp c, eyesdone
+	
+; EYES
+	ld bc, $2d4d
+	ld d, $2b
+	call drawEyes
+	
+	ld bc, $584f
+	ld d, $31
+	call drawEyes
+
+eyesdone:
 
 drawLetters:
 	ld e, $15 ; number of letters being drawn
@@ -233,4 +249,39 @@ drawLettersLoopTail:
 	dec e
 	jp nz, drawLettersLoop
 	
-	ret 
+	ret
+	
+; iterates from 0 to 5, on each odd index it will render 8 pixels below
+; bc: x and y of sprite
+; d: tile index
+drawEyes:
+	ld e, $06
+drawEyesLoop:
+	call drawSprite
+	
+	ld a, e
+	and $01
+	jp nz, :+
+	
+  ; even index, add 8 to y of sprite
+	ld a, c
+	add $08
+	ld c, a
+	
+	jp drawEyesLoopTail
+	
+: ; odd index, subtract 8 from y and add 8 to x
+	ld a, c
+	sub $08
+	ld c, a
+	
+	ld a, b
+	add $08
+	ld b, a
+	
+drawEyesLoopTail:
+	inc d
+	dec e
+	jp nz, drawEyesLoop
+	
+	ret

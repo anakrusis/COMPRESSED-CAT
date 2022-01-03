@@ -129,11 +129,15 @@ function quantiseImage()
 	local colors = {}
 	local colorcount = 0;
 	
+	local transparentZeroVal = nil;
+	
 	for x = 0, imageData:getWidth() - 1 do
 		for y = 0, imageData:getHeight() - 1 do
 			
 			local r,g,b,a  = imageData:getPixel(x,y);
 			local pixelval = value(r,g,b,a);
+			
+			if a ~= 1 then transparentZeroVal = pixelval end
 			
 			if not colors[pixelval] then
 				colors[pixelval] = true;
@@ -146,9 +150,22 @@ function quantiseImage()
 	for k,v in pairs(colors) do colorkeys[n] = k; n = n + 1; end
 	table.sort(colorkeys);
 	
-	-- now all the colors are flattened down to values between 0 and 3 
+	
 	for i = 1, colorcount do
-		local averagecolor = math.floor(4 * ((i - 1) / colorcount))
+		local averagecolor;
+		-- Yes transparency (sprites):  
+		if transparentZeroVal then
+			-- if this color is the transparent value, it Has to be zero.
+			if transparentZeroVal == colorkeys[i] then
+				averagecolor = 0x00;
+			-- otherwise, colors are flattened down to values between 1 and 3
+			else
+				averagecolor = math.floor(3 * ((i - 1) / colorcount)) + 1
+			end
+		-- No transparency (bg): colors are flattened down to values between 0 and 3 
+		else
+			averagecolor = math.floor(4 * ((i - 1) / colorcount))
+		end
 		colors[ colorkeys[i] ] = averagecolor;
 		print(averagecolor)
 	end
