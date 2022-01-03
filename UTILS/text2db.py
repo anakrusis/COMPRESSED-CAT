@@ -17,6 +17,9 @@ for i in range(len(stringIn)):
     elif charVal >= 0x61 and charVal < 0x7b: # lowercase
         newValue = charVal - 87
 
+    elif stringIn[i] == '!':
+        newValue = 0x26
+
     stringOut += format(newValue, '02x')
     stringOut += ", "
 

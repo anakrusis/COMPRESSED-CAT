@@ -38,6 +38,18 @@ function love.keypressed(key)
 	end
 end
 
+function exportTilemap()
+	local file = io.open("test.asm", "w")
+	output = "tilemap:\ndb "
+	
+	for i = 1, #tilemap do
+		local b = bitwise.bxor(tilemap[i] - 1, 0x80);
+		output = output .. "$" .. string.format("%02X", b) .. ", "
+	end
+	file:write(output)
+	file:close()
+end
+
 function export()
 	local output = "";
 	local file = io.open("test.chr", "wb");
@@ -162,6 +174,7 @@ function love.filedropped(file)
 	tileImage();
 	optimiseImage();
 	export();
+	exportTilemap();
 end
 
 function love.draw()
