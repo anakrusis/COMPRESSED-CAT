@@ -1,4 +1,5 @@
 require "tile"
+require "bitwise"
 
 function love.load()
 
@@ -35,6 +36,21 @@ function love.keypressed(key)
 	if key == "-" then
 		ZOOM = math.max(1,ZOOM-1);
 	end
+end
+
+function export()
+	local output = "";
+	local file = io.open("test.chr", "wb");
+	
+	for i = 1, #tiles do
+		local outbytes = tiles[i]:export();
+		for j = 1, #outbytes do
+			local b = outbytes[j] % 0x100;
+			output = output .. string.char(b);
+		end
+	end
+	file:write(output)
+	file:close()
 end
 
 function optimiseImage()
@@ -145,6 +161,7 @@ function love.filedropped(file)
 	quantiseImage();
 	tileImage();
 	optimiseImage();
+	export();
 end
 
 function love.draw()

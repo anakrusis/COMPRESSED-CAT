@@ -17,6 +17,32 @@ function Tile:new(o)
 	return o
 end
 
+function Tile:export()
+	local out = {};
+	for i = 0, 15 do
+		local byteout = 0x00;
+		for j = 7, 0, -1 do
+			-- pixel index ignores the parity of the byte
+			local pixelindex = 1 + ( 4 * bitwise.band(i, 0xfe) ) + ( 7 - j );
+			local color;
+			-- even bytes: low bits of color value
+			if i % 2 == 0 then
+				color = bitwise.band(self.data[pixelindex], 0x01);
+			-- odd bytes: high bits ''
+			else
+				color = bitwise.band(self.data[pixelindex], 0x02);
+			end
+			-- This is so the bitmask can take a bit from wherever
+			if color ~= 0x00 then color = 0xff end
+			
+			local bitmask = math.pow(2,j);
+			byteout = byteout + bitwise.band(color, bitmask);
+		end
+		table.insert(out, byteout);
+	end
+	return out;
+end
+
 function Tile:putData()
 	local sx = self.x * 8; local sy = self.y * 8;
 	for y = 0, 7 do
