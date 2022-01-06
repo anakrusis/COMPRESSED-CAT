@@ -40,10 +40,10 @@ end
 
 function exportTilemap()
 	local file = io.open("test.asm", "w")
-	output = "metasprites:\ndb "
+	output = "metasprites:"
 	
 	local metaspriteCount = 0x00; -- the different numbers of the metasprites
-	local newrowFlag = false;
+	local newrowFlag = true;
 	local i = 1;
 	while i <= #tilemap do
 			
@@ -54,14 +54,14 @@ function exportTilemap()
 	
 		local b = tilemap[i];
 		if b ~= 0xff then
-			b = 2 * (b - 1); -- god i love lua
+			b = 2 * (b - 1); 
 		end
 		output = output .. "$" .. string.format("%02X", b) .. ", "
 		i = i + 1;
 		
 		-- after a fully blank tile (0xff), the next metasprite row will be drawn.
 		if b == 0xff then
-			i = i - 1;
+			i = i - 1; -- god i love lua
 			i = i + widthInTiles - ( i % widthInTiles )
 			i = i + 1;
 			
@@ -71,7 +71,12 @@ function exportTilemap()
 		print(i);
 	end
 	
-	-- afterwards the pointers to the metasprites will be stored in this above table
+	-- afterwards the pointers to the metasprites will be stored in this table
+	output = output .. "\n\nmetaspritePtrs:\ndb "
+	for i = 0, metaspriteCount - 1 do
+		output = output .. "HIGH(ms" .. string.format("%02X", i) .. "), "
+		output = output .. "LOW(ms" .. string.format("%02X", i)  .. "), "
+	end
 	
 	file:write(output)
 	file:close()

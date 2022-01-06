@@ -50,14 +50,51 @@ tilemap:
 db $80, $80, $80, $81, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $82, $83, $84, $80, $80, $80, $80, $80, $80, $80, $85, $86, $87, $80, $80, $80, $80, $80, $80, $80, $88, $89, $8A, $8B, $80, $80, $80, $80, $80, $8C, $8D, $8E, $8F, $80, $80, $80, $80, $80, $80, $80, $90, $91, $92, $93, $94, $80, $95, $96, $97, $98, $99, $9A, $80, $80, $80, $80, $80, $80, $80, $9B, $9C, $9D, $9E, $9F, $A0, $A1, $A2, $A3, $A4, $A5, $84, $A6, $80, $80, $80, $80, $80, $80, $80, $A7, $A8, $A9, $AA, $9F, $AB, $AC, $AD, $AE, $9F, $AF, $B0, $B1, $80, $80, $80, $80, $80, $80, $80, $80, $80, $B2, $9F, $B3, $B4, $B5, $B6, $B7, $9F, $9F, $B8, $B9, $95, $80, $80, $80, $80, $80, $80, $80, $80, $BA, $9F, $BB, $BC, $9F, $BD, $BE, $9F, $9F, $9F, $BF, $C0, $80, $80, $80, $80, $80, $80, $80, $C1, $C2, $C3, $9F, $9F, $9F, $C4, $9F, $9F, $C5, $C6, $C7, $C8, $80, $80, $80, $80, $80, $80, $80, $C9, $CA, $9F, $9F, $9F, $9F, $9F, $9F, $9F, $CB, $CC, $CD, $CE, $80, $80, $80, $80, $80, $80, $80, $CF, $D0, $9F, $9F, $9F, $9F, $9F, $9F, $9F, $9F, $D1, $D2, $D3, $80, $80, $80, $80, $80, $80, $80, $D4, $D5, $D6, $9F, $9F, $9F, $9F, $9F, $9F, $D7, $D8, $D9, $DA, $80, $80, $80, $80, $80, $80, $80, $DB, $DC, $DD, $DE, $9F, $9F, $9F, $9F, $9F, $DF, $E0, $E1, $E2, $E3, $80, $80, $80, $80, $80, $80, $E4, $E5, $E6, $E7, $9F, $9F, $9F, $9F, $9F, $E8, $E9, $EA, $EB, $EC, $ED, $EE, $80, $80, $80, $80, $80, $EF, $F0, $9F, $9F, $9F, $9F, $9F, $9F, $F1, $9F, $F2, $F3, $F4, $F5, $80, $80, $80, $80, $80, $80, $F6, $F7, $9F, $9F, $9F, $9F, $9F, $9F, $9F, $F8, $F9, $FA, $FB, $FC, $FD, $80, $80, $80, $80, $FE, $FF, $00, $9F, $9F, $9F, $9F, $9F, $9F, $9F, $01, $9F, $02, $03, $9F, $04, $80, $80, $80, $80, $80, $05, $06, $07, $9F, $9F, $9F, $9F, $08, $09, $0A, $9F, $0B, $9F, $9F, $0C, $80, 
 tilemapEnd:
 
+metasprites:
+ms00:
+db $00, $02, $04, $FF, 
+ms01:
+db $06, $08, $0A, $FF, 
+ms02:
+db $0C, $0E, $10, $12, $14, $FF, 
+ms03:
+db $16, $18, $1A, $1C, $1E, $FF, 
+ms04:
+db $20, $0E, $10, $12, $22, $FF, 
+ms05:
+db $24, $26, $28, $2A, $2C, $FF, 
+ms06:
+db $2E, $30, $32, $FF, 
+ms07:
+db $34, $36, $38, $FF, 
+ms08:
+db $3A, $3A, $3C, $3E, $40, $FF, 
+ms09:
+db $42, $44, $46, $48, $4A, $FF, 
+ms0A:
+db $4C, $4C, $4E, $50, $52, $FF, 
+
+metaspritePtrs:
+db HIGH(ms00), LOW(ms00), HIGH(ms01), LOW(ms01), HIGH(ms02), LOW(ms02), HIGH(ms03), LOW(ms03), HIGH(ms04), LOW(ms04), HIGH(ms05), LOW(ms05), HIGH(ms06), LOW(ms06), HIGH(ms07), LOW(ms07), HIGH(ms08), LOW(ms08), HIGH(ms09), LOW(ms09), HIGH(ms0A), LOW(ms0A), 
+
 SECTION "vars", WRAM0[USER_RAM_START]
 temp1: ds 1
 temp2: ds 1
 temp3: ds 1
 temp4: ds 1
 globalTimer: ds 1
+lastKeys: ds 1 ; key state last frame
 textPtr: ds 1
 spritesDrawnCount: ds 1 ; how many sprites have been drawned in this frame
+
+; ANIMATION STATES
+animframe_EYE_L:   ds 1
+animframe_EYE_R:   ds 1
+animframe_SNOOT_T: ds 1
+animframe_SNOOT_B: ds 1
+animframe_EAR_T: ds 1
+animframe_EAR_M: ds 1
+animframe_EAR_B: ds 1
 	
 SECTION "start", ROM0
 begin:
@@ -79,9 +116,26 @@ begin:
 	
 	ld a, %00011011
 	ld [BG_PALETTE], a
-	
 	ld a, %00101111
 	ld [SPRITE_PALETTE_1], a
+	ld a, %01101111
+	ld [SPRITE_PALETTE_2], a
+	
+	; Init the animation frames
+	ld a, $00
+	ld [animframe_EYE_L], a
+	ld a, $01
+	ld [animframe_EYE_R], a
+	ld a, $02
+	ld [animframe_SNOOT_T], a
+	ld a, $03
+	ld [animframe_SNOOT_B], a
+	ld a, $08
+	ld [animframe_EAR_T], a
+	ld a, $09
+	ld [animframe_EAR_M], a
+	ld a, $0a
+	ld [animframe_EAR_B], a
 	
 frame:
 stepTxtPtr:
@@ -95,27 +149,93 @@ stepTxtPtr:
 	inc [hl]
 	
 stepTxtPtrDone:
+	
+	call ReadKeys
+	push af
+	push af
+	push af
+	
+	; is KEY_A pressed?
+	and KEY_A
+	ld b, a
+	cp 0
+	jp z, :+
+	
+	; is the state of KEY_A different from last frame?
+	ld a, [lastKeys]
+	and KEY_A
+	cp b
+	jp z, :+
+	
+	; flips between metasprites 00 and 06
+	ld a, [animframe_EYE_L]
+	xor $06
+	ld [animframe_EYE_L], a
+	; flips between metasprites 01 and 07
+	ld a, [animframe_EYE_R]
+	xor $06
+	ld [animframe_EYE_R], a
+	
+:
+	pop af
+	; is KEY_B pressed?
+	and KEY_B
+	ld b, a
+	cp 0
+	jp z, :+
+	
+	; is the state of KEY_B different from last frame?
+	ld a, [lastKeys]
+	and KEY_B
+	cp b
+	jp z, :+
+	
+	; flips between metasprites 02 and 04
+	ld a, [animframe_SNOOT_T]
+	xor $06
+	ld [animframe_SNOOT_T], a
+	; flips between metasprites 03 and 05
+	ld a, [animframe_SNOOT_B]
+	xor $06
+	ld [animframe_SNOOT_B], a
+:
+
+	pop af
+	; is KEY_UP pressed?
+	and KEY_UP
+	ld b, a
+	cp 0
+	jp z, :+
+	
+	; is the state of KEY_UP different from last frame?
+	ld a, [lastKeys]
+	and KEY_UP
+	cp b
+	jp z, :+
+	
+	; flips between metasprites 08 and 88
+	ld a, [animframe_EAR_T]
+	xor $80
+	ld [animframe_EAR_T], a
+	; flips between metasprites 09 and 89
+	ld a, [animframe_EAR_M]
+	xor $80
+	ld [animframe_EAR_M], a
+	; flips between metasprites 0a and 8a
+	ld a, [animframe_EAR_B]
+	xor $80
+	ld [animframe_EAR_B], a
+:
+
+buttonReadDone:
+	pop af
+	ld [lastKeys], a
+
 	call fillSprites
 	
 	halt
 	nop
 	jp frame
-	
-; This is only for bulk drawing right now, don't use it while lcd is on or corruption will probably happen	
-; hl: pointer to start
-; de: pointer to copy to
-; bc: length of copy
-copyTilesToVRAM:	
-copyTilesLoop:
-	ld a, [de]
-	ld [hli], a
-	inc de
-	dec bc
-	
-	ld a, b
-	or a, c
-	jp nz, copyTilesLoop
-	ret
 	
 ; tile index in d
 ; x and y in b/c
@@ -138,6 +258,12 @@ drawSprite:
 	inc hl
 	ld [hl], $00 ; flags
 	
+	ld a, d
+	cp $3a
+	jp c, :+
+	
+	ld [hl], $10 ; writes object palette 2
+:
 	ld hl, spritesDrawnCount
 	inc [hl]
 	
@@ -177,34 +303,78 @@ allSpritesOffscreenLoop:
 
 ; SNOUT
 drawSnoot:	
-	ld e, $05
 	ld bc, $385f
-	ld d, $3c
+	ld a, [animframe_SNOOT_T]
+	ld e, a
 	call drawBigObject
 	
-	ld e, $05
 	ld bc, $386f
-	ld d, $46
+	ld a, [animframe_SNOOT_B]
+	ld e, a
 	call drawBigObject
 	
-blinkCheck:
-	ld a, [globalTimer]
-	and $2f
-	sub $06
-	jp c, drawEyesDone
+; blinkCheck:
+	; ld a, [globalTimer]
+	; and $2f
+	; sub $06
+	; jp c, drawEyesDone
 
 ; EYES
 drawEyes:
-	ld e, $03
+	; left eye
 	ld bc, $2e4d
-	ld d, $30
+	
+	; closed eyes are drawn 5 pixels lower
+	ld a, [animframe_EYE_L]
+	and $06
+	jp z, :+
+	
+	ld a, c
+	add a, $05
+	ld c, a
+:
+	ld a, [animframe_EYE_L]
+	ld e, a
 	call drawBigObject
 	
-	ld e, $03
+	; right eye
 	ld bc, $584f
-	ld d, $36
+	
+	; ditto
+	ld a, [animframe_EYE_R]
+	and $06
+	jp z, :+
+	
+	ld a, c
+	add a, $04
+	ld c, a
+:	
+	
+	ld a, [animframe_EYE_R]
+	ld e, a
 	call drawBigObject
 drawEyesDone:
+
+drawEar:
+	
+	ld a, [animframe_EAR_T]
+	and $80
+	jp nz, drawEarDone
+	
+	ld bc, $6018
+	ld a, [animframe_EAR_T]
+	ld e, a
+	call drawBigObject
+	ld bc, $6028
+	ld a, [animframe_EAR_M]
+	ld e, a
+	call drawBigObject
+	ld bc, $6038
+	ld a, [animframe_EAR_B]
+	ld e, a
+	call drawBigObject
+	
+drawEarDone:
 
 	ret
 	; no more text (for now)
@@ -269,12 +439,37 @@ drawLettersLoopTail:
 	
 	ret
 	
-; iterates from 0 to 5, on each odd index it will render 8 pixels below
+; iterates until it reaches value $ff
 ; bc: x and y of sprite
-; d: tile index
-; e: size in tiles 
+; (d)e: metasprite number
+
 drawBigObject:
+	; (d)e is an offset into the pointer table added to the base in hl
+	ld d, $00
+	sla e
+	
+	ld hl, metaspritePtrs
+	add hl, de
+	
+	; now de has the pointer to the start of metatile data
+	ld a, [hli]
+	ld d, a
+	ld a, [hli]
+	ld e, a
+	
+	ld h, d
+	ld l, e
+	
+; internal
+; d: tile index	
 drawBigObjLoop:
+	ld a, [hli]
+	ld d, a
+	
+	; $ff = metasprite terminator
+	sub a, $ff
+	jp z, drawBigObjDone
+	
 	call drawSprite
 	
 	; ld a, e
@@ -301,10 +496,13 @@ drawBigObjLoop:
 	ld b, a
 	
 drawBigObjLoopTail:
-	inc d
-	inc d
+	; inc d
+	; inc d
 	
-	dec e
-	jp nz, drawBigObjLoop
+	; dec e
+	;jp nz, drawBigObjLoop
 	
+	jp drawBigObjLoop
+
+drawBigObjDone:	
 	ret
