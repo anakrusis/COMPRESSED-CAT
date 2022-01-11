@@ -109,6 +109,7 @@ betweenBlinkTimer:     ds 1
 earTwitchTimer:        ds 1
 ; we initialise it on startup to a high number like 3600
 betweenEarTwitchTimer: ds 2
+earTwitching:          ds 1
 	
 SECTION "start", ROM0
 begin:
@@ -176,6 +177,12 @@ gbcPaletteLoop2:
 	
 	ld a, $60
 	ld [betweenBlinkTimer], a
+	ld a, $10
+	ld [betweenEarTwitchTimer], a
+	ld a, $0e
+	ld [betweenEarTwitchTimer + 1], a
+	ld a, $00
+	ld [earTwitching], a
 	
 	ld a, $00
 	ld [seed], a
@@ -275,12 +282,16 @@ stepTxtPtrDone:
 ; buttonReadDone:
 	; pop af
 	; ld [lastKeys], a
-	
+
+;
+; EYE BLINKING HANDLING!!!!!!!!!!
+;	
 	ld hl, blinkTimer
 	dec [hl]
 	jp nz, handleBlinkDone
 	
 handleBlink:
+; ends the blink here
 	call rnJesus
 	ld [betweenBlinkTimer], a
 	
@@ -313,24 +324,84 @@ handleBetweenBlink:
 	ld [animframe_EYE_R], a	
 	
 handleBetweenBlinkDone:
-	
-	; ld a, [betweenBlinkTimer]
-	; jp nz, handleBetweenBlink
-	; jp handleBetweenBlinkDone
-	
-; handleBetweenBlink:
-	; dec a
-	; ld [betweenBlinkTimer], a
-	; cp $ff
-	; jp nz, handleBetweenBlinkDone
-	
-	; ld a, 0
-	; ld [betweenBlinkTimer], a
-	
-	; ; zero value in betweenBlinkTimer means blink begins now
 
+;
+; EAR TWITCHING HANDLING!!!!!!!!!!
+;
+	ld hl, earTwitchTimer
+	ld a, [hl]
+	cp $ff
+	jp z, handleTwitchDone
 	
-; handleBetweenBlinkDone:
+	dec [hl]
+	jp nz, handleTwitchDone
+	
+handleTwitch:
+; ends the ear twitch here, 3600 frames in between
+	ld a, $10
+	ld [betweenEarTwitchTimer], a
+	ld a, $0e
+	ld [betweenEarTwitchTimer + 1], a
+	
+	ld a, $00
+	ld [earTwitching], a
+	
+	ld a, $ff
+	ld [earTwitchTimer], a
+	
+handleTwitchDone:
+	ld hl, betweenEarTwitchTimer
+	
+	; puts the value of betweenEarTwitchTimer in de without affecting hl
+	ld e, [hl]
+	inc hl
+	ld d, [hl]
+	dec hl
+	
+	; 16-bit decrements and puts back in place still pointed at hl
+	dec de
+	ld [hl], e
+	inc hl
+	ld [hl], d
+	
+	ld a, d
+	or a, e
+	jp nz, handleBetweenTwitchDone
+	
+handleBetweenTwitch:
+; initiates a new twitch here, 32 frames long
+	ld a, $20
+	ld [earTwitchTimer], a
+	
+	ld a, $01
+	ld [earTwitching], a
+	
+handleBetweenTwitchDone:
+
+	; by default ears will be hidden
+	ld a, $80
+	ld [animframe_EAR_T], a 
+	ld [animframe_EAR_M], a 
+	ld [animframe_EAR_B], a 
+	
+	ld a, [earTwitching]
+	cp 0
+	jp z, decideEarFramesDone 
+
+	ld a, [earTwitchTimer]
+	and $08
+	cp 0
+	jp z, decideEarFramesDone
+	
+	ld a, $08
+	ld [animframe_EAR_T], a
+	ld a, $09
+	ld [animframe_EAR_M], a
+	ld a, $0a
+	ld [animframe_EAR_B], a
+
+decideEarFramesDone:
+	
 
 	call fillSprites
 	
