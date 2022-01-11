@@ -2,6 +2,7 @@ SECTION "Includes@home",ROM0
 
 ROM_SIZE EQU 0 
 RAM_SIZE EQU 0
+GBC_SUPPORT EQU 1
 
 ; Macro for copying a rectangular region into VRAM
 ; Changes ALL registers
@@ -77,12 +78,17 @@ db $4C, $4C, $4E, $50, $52, $FF,
 metaspritePtrs:
 db HIGH(ms00), LOW(ms00), HIGH(ms01), LOW(ms01), HIGH(ms02), LOW(ms02), HIGH(ms03), LOW(ms03), HIGH(ms04), LOW(ms04), HIGH(ms05), LOW(ms05), HIGH(ms06), LOW(ms06), HIGH(ms07), LOW(ms07), HIGH(ms08), LOW(ms08), HIGH(ms09), LOW(ms09), HIGH(ms0A), LOW(ms0A), 
 
+db $ff, $ff
+bgPalette:
+db $00, $00, $06, $18, $3e, $f8, $ff, $ff
+
 SECTION "vars", WRAM0[USER_RAM_START]
 temp1: ds 1
 temp2: ds 1
 temp3: ds 1
 temp4: ds 1
 globalTimer: ds 1
+seed: ds 2
 lastKeys: ds 1 ; key state last frame
 textPtr: ds 1
 spritesDrawnCount: ds 1 ; how many sprites have been drawned in this frame
@@ -92,9 +98,17 @@ animframe_EYE_L:   ds 1
 animframe_EYE_R:   ds 1
 animframe_SNOOT_T: ds 1
 animframe_SNOOT_B: ds 1
-animframe_EAR_T: ds 1
-animframe_EAR_M: ds 1
-animframe_EAR_B: ds 1
+animframe_EAR_T:   ds 1
+animframe_EAR_M:   ds 1
+animframe_EAR_B:   ds 1
+
+blinkTimer:            ds 1
+; semi random time
+betweenBlinkTimer:     ds 1
+; the bit xxxx 1xxx to determine the ear frame 
+earTwitchTimer:        ds 1
+; we initialise it on startup to a high number like 3600
+betweenEarTwitchTimer: ds 2
 	
 SECTION "start", ROM0
 begin:
@@ -112,14 +126,37 @@ begin:
 	
 	CopyRegionToVRAM 18, 20, tilemap, BACKGROUND_MAPDATA_START
 	
-	call StartLCD
+	; gbc background palette
+	ld a, $80
+	ld [GBC_BG_PALETTE_INDEX], a
+	ld e, 8
+	ld hl, bgPalette
+gbcPaletteLoop:
+	ld a, [hli]
+	ld [GBC_BG_PALETTE], a	
+	dec e
+	jp nz, gbcPaletteLoop
+
+	; gbc background palette
+	ld a, $80
+	ld [GBC_SPRITE_PALETTE_INDEX], a
+	ld e, 8
+	ld hl, bgPalette - 2
+gbcPaletteLoop2:
+	ld a, [hli]
+	ld [GBC_SPRITE_PALETTE], a	
+	dec e
+	jp nz, gbcPaletteLoop2
 	
+	; gameboy palettes...
 	ld a, %00011011
 	ld [BG_PALETTE], a
 	ld a, %00101111
 	ld [SPRITE_PALETTE_1], a
 	ld a, %01101111
 	ld [SPRITE_PALETTE_2], a
+	
+	call StartLCD
 	
 	; Init the animation frames
 	ld a, $00
@@ -137,6 +174,14 @@ begin:
 	ld a, $0a
 	ld [animframe_EAR_B], a
 	
+	ld a, $60
+	ld [betweenBlinkTimer], a
+	
+	ld a, $00
+	ld [seed], a
+	ld a, $01
+	ld [seed+1], a
+	
 frame:
 stepTxtPtr:
 	ld hl, globalTimer
@@ -150,125 +195,148 @@ stepTxtPtr:
 	
 stepTxtPtrDone:
 	
-	call ReadKeys
-	push af
-	push af
-	push af
+	; call ReadKeys
+	; push af
+	; push af
+	; push af
 	
-	; is KEY_A pressed?
-	and KEY_A
-	ld b, a
-	cp 0
-	jp z, :+
+	; ; is KEY_A pressed?
+	; and KEY_A
+	; ld b, a
+	; cp 0
+	; jp z, :+
 	
-	; is the state of KEY_A different from last frame?
-	ld a, [lastKeys]
-	and KEY_A
-	cp b
-	jp z, :+
+	; ; is the state of KEY_A different from last frame?
+	; ld a, [lastKeys]
+	; and KEY_A
+	; cp b
+	; jp z, :+
 	
-	; flips between metasprites 00 and 06
+	; ; flips between metasprites 00 and 06
+	; ld a, [animframe_EYE_L]
+	; xor $06
+	; ld [animframe_EYE_L], a
+	; ; flips between metasprites 01 and 07
+	; ld a, [animframe_EYE_R]
+	; xor $06
+	; ld [animframe_EYE_R], a
+	
+; :
+	; pop af
+	; ; is KEY_B pressed?
+	; and KEY_B
+	; ld b, a
+	; cp 0
+	; jp z, :+
+	
+	; ; is the state of KEY_B different from last frame?
+	; ld a, [lastKeys]
+	; and KEY_B
+	; cp b
+	; jp z, :+
+	
+	; ; flips between metasprites 02 and 04
+	; ld a, [animframe_SNOOT_T]
+	; xor $06
+	; ld [animframe_SNOOT_T], a
+	; ; flips between metasprites 03 and 05
+	; ld a, [animframe_SNOOT_B]
+	; xor $06
+	; ld [animframe_SNOOT_B], a
+; :
+
+	; pop af
+	; ; is KEY_UP pressed?
+	; and KEY_UP
+	; ld b, a
+	; cp 0
+	; jp z, :+
+	
+	; ; is the state of KEY_UP different from last frame?
+	; ld a, [lastKeys]
+	; and KEY_UP
+	; cp b
+	; jp z, :+
+	
+	; ; flips between metasprites 08 and 88
+	; ld a, [animframe_EAR_T]
+	; xor $80
+	; ld [animframe_EAR_T], a
+	; ; flips between metasprites 09 and 89
+	; ld a, [animframe_EAR_M]
+	; xor $80
+	; ld [animframe_EAR_M], a
+	; ; flips between metasprites 0a and 8a
+	; ld a, [animframe_EAR_B]
+	; xor $80
+	; ld [animframe_EAR_B], a
+; :
+
+; buttonReadDone:
+	; pop af
+	; ld [lastKeys], a
+	
+	ld hl, blinkTimer
+	dec [hl]
+	jp nz, handleBlinkDone
+	
+handleBlink:
+	call rnJesus
+	ld [betweenBlinkTimer], a
+	
+	; ; flips between metasprites 00 and 06
 	ld a, [animframe_EYE_L]
 	xor $06
 	ld [animframe_EYE_L], a
 	; flips between metasprites 01 and 07
 	ld a, [animframe_EYE_R]
 	xor $06
-	ld [animframe_EYE_R], a
+	ld [animframe_EYE_R], a	
 	
-:
-	pop af
-	; is KEY_B pressed?
-	and KEY_B
-	ld b, a
-	cp 0
-	jp z, :+
+handleBlinkDone:
+	ld hl, betweenBlinkTimer
+	dec [hl]
+	jp nz, handleBetweenBlinkDone
 	
-	; is the state of KEY_B different from last frame?
-	ld a, [lastKeys]
-	and KEY_B
-	cp b
-	jp z, :+
+handleBetweenBlink:
+; initiates a new blink here
+	ld a, 8
+	ld [blinkTimer], a
 	
-	; flips between metasprites 02 and 04
-	ld a, [animframe_SNOOT_T]
+	; ; flips between metasprites 00 and 06
+	ld a, [animframe_EYE_L]
 	xor $06
-	ld [animframe_SNOOT_T], a
-	; flips between metasprites 03 and 05
-	ld a, [animframe_SNOOT_B]
+	ld [animframe_EYE_L], a
+	; flips between metasprites 01 and 07
+	ld a, [animframe_EYE_R]
 	xor $06
-	ld [animframe_SNOOT_B], a
-:
-
-	pop af
-	; is KEY_UP pressed?
-	and KEY_UP
-	ld b, a
-	cp 0
-	jp z, :+
+	ld [animframe_EYE_R], a	
 	
-	; is the state of KEY_UP different from last frame?
-	ld a, [lastKeys]
-	and KEY_UP
-	cp b
-	jp z, :+
+handleBetweenBlinkDone:
 	
-	; flips between metasprites 08 and 88
-	ld a, [animframe_EAR_T]
-	xor $80
-	ld [animframe_EAR_T], a
-	; flips between metasprites 09 and 89
-	ld a, [animframe_EAR_M]
-	xor $80
-	ld [animframe_EAR_M], a
-	; flips between metasprites 0a and 8a
-	ld a, [animframe_EAR_B]
-	xor $80
-	ld [animframe_EAR_B], a
-:
+	; ld a, [betweenBlinkTimer]
+	; jp nz, handleBetweenBlink
+	; jp handleBetweenBlinkDone
+	
+; handleBetweenBlink:
+	; dec a
+	; ld [betweenBlinkTimer], a
+	; cp $ff
+	; jp nz, handleBetweenBlinkDone
+	
+	; ld a, 0
+	; ld [betweenBlinkTimer], a
+	
+	; ; zero value in betweenBlinkTimer means blink begins now
 
-buttonReadDone:
-	pop af
-	ld [lastKeys], a
+	
+; handleBetweenBlinkDone:
 
 	call fillSprites
 	
 	halt
 	nop
 	jp frame
-	
-; tile index in d
-; x and y in b/c
-drawSprite:
-	push hl ; hl clobber prevention
-	
-	; high byte of address always starts at c1xx
-	ld h, $c1
-	; low byte of address is 4 * spritesDrawnCount
-	ld a, [spritesDrawnCount]
-	sla a
-	sla a
-	ld l, a
-	
-	ld [hl], c   ; sprite y
-	inc hl
-	ld [hl], b   ; sprite x
-	inc hl
-	ld [hl], d   ; tile index
-	inc hl
-	ld [hl], $00 ; flags
-	
-	ld a, d
-	cp $3a
-	jp c, :+
-	
-	ld [hl], $10 ; writes object palette 2
-:
-	ld hl, spritesDrawnCount
-	inc [hl]
-	
-	pop hl
-	ret
 	
 ; just fills the whole dern thing with blank tiles
 clearNametable:
@@ -284,225 +352,24 @@ clearNametableLoop:
 	jp nz, clearNametableLoop
 
 	ret
-
-fillSprites:
-allSpritesOffscreen:
-	ld a, $00
-	ld hl, spritesDrawnCount
-	ld [hl], a
-
-	; iterates from c100 to c19f and clears all the sprite table
-	; TODO this can be rewritten a bit faster due to oam having the nicely aligned start index 
-	ld b, $80
-	ld hl, $c100
-allSpritesOffscreenLoop:
-	ld a, $fe
-	ld [hli], a
-	dec b
-	jp nz, allSpritesOffscreenLoop
-
-; SNOUT
-drawSnoot:	
-	ld bc, $385f
-	ld a, [animframe_SNOOT_T]
-	ld e, a
-	call drawBigObject
 	
-	ld bc, $386f
-	ld a, [animframe_SNOOT_B]
-	ld e, a
-	call drawBigObject
-	
-; blinkCheck:
-	; ld a, [globalTimer]
-	; and $2f
-	; sub $06
-	; jp c, drawEyesDone
-
-; EYES
-drawEyes:
-	; left eye
-	ld bc, $2e4d
-	
-	; closed eyes are drawn 5 pixels lower
-	ld a, [animframe_EYE_L]
-	and $06
-	jp z, :+
-	
-	ld a, c
-	add a, $05
-	ld c, a
-:
-	ld a, [animframe_EYE_L]
-	ld e, a
-	call drawBigObject
-	
-	; right eye
-	ld bc, $584f
-	
-	; ditto
-	ld a, [animframe_EYE_R]
-	and $06
-	jp z, :+
-	
-	ld a, c
-	add a, $04
-	ld c, a
-:	
-	
-	ld a, [animframe_EYE_R]
-	ld e, a
-	call drawBigObject
-drawEyesDone:
-
-drawEar:
-	
-	ld a, [animframe_EAR_T]
-	and $80
-	jp nz, drawEarDone
-	
-	ld bc, $6018
-	ld a, [animframe_EAR_T]
-	ld e, a
-	call drawBigObject
-	ld bc, $6028
-	ld a, [animframe_EAR_M]
-	ld e, a
-	call drawBigObject
-	ld bc, $6038
-	ld a, [animframe_EAR_B]
-	ld e, a
-	call drawBigObject
-	
-drawEarDone:
-
-	ret
-	; no more text (for now)
-
-drawLetters:
-	ld e, $15 ; number of letters being drawn
-	
-	; starting point of text
-	ld hl, text
-	ld a, [textPtr]
-	add a, l
-	ld l, a
-	
-	; if we reach the end of the text, we must loop back.
-	sub a, LOW(textEnd)
-	jp nz, :+
-	; resets the text pointer and hl
-	ld hl, text
-	ld a, $00
-	ld [textPtr], a
-:
-	ld bc, $0090
-	ld a, [globalTimer]
-	xor a, $ff
-	;inc a
-	and a, $07
-	ld b, a
-	
-drawLettersLoop:
-	ld a, [hli]
-	ld d, a
-	
-	; space character: won't assign a sprite
-	sub a, $24
-	jp z, drawLettersLoopTail
-	
-	push hl
-	; ld hl, sine
-	; ld a, [globalTimer]
-	; add a, l
-	; ld l, a
-	; ld a, [hl]
-	
-	;srl a 
-	;srl a
-	;srl a
-	
-	ld a, $80
-	add a, e
-	ld c, a
-	pop hl
-	
-	call drawSprite
-
-drawLettersLoopTail:	
-	ld a, $08
-	add a, b
-	ld b, a
-	
+; puts a random number in a
+; (this is ported over from the nesdev wiki prng)
+; http://wiki.nesdev.com/w/index.php/Random_number_generator
+rnJesus:
+	ld e, 8
+	ld a, [seed]
+rnJesus1:
+	sla a
+	ld hl, seed+1
+	rl [hl]
+	jp nc, rnJesus2
+	xor $39
+rnJesus2:
 	dec e
-	jp nz, drawLettersLoop
-	
+	jp nz, rnJesus1
+	ld [seed], a
+	cp 0
 	ret
 	
-; iterates until it reaches value $ff
-; bc: x and y of sprite
-; (d)e: metasprite number
-
-drawBigObject:
-	; (d)e is an offset into the pointer table added to the base in hl
-	ld d, $00
-	sla e
-	
-	ld hl, metaspritePtrs
-	add hl, de
-	
-	; now de has the pointer to the start of metatile data
-	ld a, [hli]
-	ld d, a
-	ld a, [hli]
-	ld e, a
-	
-	ld h, d
-	ld l, e
-	
-; internal
-; d: tile index	
-drawBigObjLoop:
-	ld a, [hli]
-	ld d, a
-	
-	; $ff = metasprite terminator
-	sub a, $ff
-	jp z, drawBigObjDone
-	
-	call drawSprite
-	
-	; ld a, e
-	; and $01
-	; jp nz, :+
-	
-  ; ; even index, add 8 to y of sprite
-	; ld a, c
-	; add $08
-	; ld c, a
-	
-	; jp drawBigObjLoopTail
-	
-; : ; odd index, subtract 8 from y and add 8 to x
-	; ld a, c
-	; sub $08
-	; ld c, a
-	
-	; ----
-	
-	; add 8 to x
-	ld a, b
-	add $08
-	ld b, a
-	
-drawBigObjLoopTail:
-	; inc d
-	; inc d
-	
-	; dec e
-	;jp nz, drawBigObjLoop
-	
-	jp drawBigObjLoop
-
-drawBigObjDone:	
-	ret
+INCLUDE "sprite.asm"
