@@ -202,86 +202,34 @@ stepTxtPtr:
 	
 stepTxtPtrDone:
 	
-	; call ReadKeys
-	; push af
-	; push af
-	; push af
+	call ReadKeys
+	push af
 	
-	; ; is KEY_A pressed?
-	; and KEY_A
-	; ld b, a
-	; cp 0
-	; jp z, :+
+	; is KEY_A pressed?
+	and KEY_A
+	ld b, a
+	cp 0
+	jp z, :+
 	
-	; ; is the state of KEY_A different from last frame?
-	; ld a, [lastKeys]
-	; and KEY_A
-	; cp b
-	; jp z, :+
+	; is the state of KEY_A different from last frame?
+	ld a, [lastKeys]
+	and KEY_A
+	cp b
+	jp z, :+
 	
-	; ; flips between metasprites 00 and 06
-	; ld a, [animframe_EYE_L]
-	; xor $06
-	; ld [animframe_EYE_L], a
-	; ; flips between metasprites 01 and 07
-	; ld a, [animframe_EYE_R]
-	; xor $06
-	; ld [animframe_EYE_R], a
-	
-; :
-	; pop af
-	; ; is KEY_B pressed?
-	; and KEY_B
-	; ld b, a
-	; cp 0
-	; jp z, :+
-	
-	; ; is the state of KEY_B different from last frame?
-	; ld a, [lastKeys]
-	; and KEY_B
-	; cp b
-	; jp z, :+
-	
-	; ; flips between metasprites 02 and 04
-	; ld a, [animframe_SNOOT_T]
-	; xor $06
-	; ld [animframe_SNOOT_T], a
-	; ; flips between metasprites 03 and 05
-	; ld a, [animframe_SNOOT_B]
-	; xor $06
-	; ld [animframe_SNOOT_B], a
-; :
+	; flips between metasprites 02 and 04
+	ld a, [animframe_SNOOT_T]
+	xor $06
+	ld [animframe_SNOOT_T], a
+	; flips between metasprites 03 and 05
+	ld a, [animframe_SNOOT_B]
+	xor $06
+	ld [animframe_SNOOT_B], a
+:
 
-	; pop af
-	; ; is KEY_UP pressed?
-	; and KEY_UP
-	; ld b, a
-	; cp 0
-	; jp z, :+
-	
-	; ; is the state of KEY_UP different from last frame?
-	; ld a, [lastKeys]
-	; and KEY_UP
-	; cp b
-	; jp z, :+
-	
-	; ; flips between metasprites 08 and 88
-	; ld a, [animframe_EAR_T]
-	; xor $80
-	; ld [animframe_EAR_T], a
-	; ; flips between metasprites 09 and 89
-	; ld a, [animframe_EAR_M]
-	; xor $80
-	; ld [animframe_EAR_M], a
-	; ; flips between metasprites 0a and 8a
-	; ld a, [animframe_EAR_B]
-	; xor $80
-	; ld [animframe_EAR_B], a
-; :
-
-; buttonReadDone:
-	; pop af
-	; ld [lastKeys], a
+buttonReadDone:
+	pop af
+	ld [lastKeys], a
 
 ;
 ; EYE BLINKING HANDLING!!!!!!!!!!
