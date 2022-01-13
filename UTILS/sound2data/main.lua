@@ -16,8 +16,9 @@ function love.filedropped(file)
 		if i % 4 == 0 then
 			local cs = soundData:getSample(i); -- range -1 to 1
 			cs = ( 1 + cs ) / 2 -- 0 to 1
-			cs = math.floor(cs * 15) -- 0 to 15
+			cs = math.floor(cs * 16) -- 0 to 15
 			--print(cs)
+			cs = math.min(15,cs)
 			
 			table.insert(output_nybbles, cs)
 		end
@@ -41,6 +42,7 @@ function love.filedropped(file)
 		end
 		output = output .. "$" .. string.format("%02X", sum) .. ", ";
 	end
+	output = output .. "\nsampleDataEnd:"
 	
 	file:write(output)
 	file:close()

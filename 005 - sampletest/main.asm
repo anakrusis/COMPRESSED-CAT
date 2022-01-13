@@ -14,7 +14,8 @@ sine:
 	db $80, $83, $86, $89, $8C, $8F, $92, $95, $98, $9B, $9E, $A1, $A4, $A7, $AA, $AD, $B0, $B3, $B6, $B9, $BB, $BE, $C1, $C3, $C6, $C9, $CB, $CE, $D0, $D2, $D5, $D7, $D9, $DB, $DE, $E0, $E2, $E4, $E6, $E7, $E9, $EB, $EC, $EE, $F0, $F1, $F2, $F4, $F5, $F6, $F7, $F8, $F9, $FA, $FB, $FB, $FC, $FD, $FD, $FE, $FE, $FE, $FE, $FE, $FF, $FE, $FE, $FE, $FE, $FE, $FD, $FD, $FC, $FB, $FB, $FA, $F9, $F8, $F7, $F6, $F5, $F4, $F2, $F1, $F0, $EE, $EC, $EB, $E9, $E7, $E6, $E4, $E2, $E0, $DE, $DB, $D9, $D7, $D5, $D2, $D0, $CE, $CB, $C9, $C6, $C3, $C1, $BE, $BB, $B9, $B6, $B3, $B0, $AD, $AA, $A7, $A4, $A1, $9E, $9B, $98, $95, $92, $8F, $8C, $89, $86, $83, $80, $7C, $79, $76, $73, $70, $6D, $6A, $67, $64, $61, $5E, $5B, $58, $55, $52, $4F, $4C, $49, $46, $44, $41, $3E, $3C, $39, $36, $34, $31, $2F, $2D, $2A, $28, $26, $24, $21, $1F, $1D, $1B, $19, $18, $16, $14, $13, $11, $0F, $0E, $0D, $0B, $0A, $09, $08, $07, $06, $05, $04, $04, $03, $02, $02, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $02, $02, $03, $04, $04, $05, $06, $07, $08, $09, $0A, $0B, $0D, $0E, $0F, $11, $13, $14, $16, $18, $19, $1B, $1D, $1F, $21, $24, $26, $28, $2A, $2D, $2F, $31, $34, $36, $39, $3C, $3E, $41, $44, $46, $49, $4C, $4F, $52, $55, $58, $5B, $5E, $61, $64, $67, $6A, $6D, $70, $73, $76, $79, $7C
 
 text:
-db $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $10, $1b, $0e, $0e, $1d, $12, $17, $10, $1c, $24, $0a, $15, $15, $24, $16, $22, $24, $0f, $1b, $12, $0e, $17, $0d, $1c, $24, $0a, $1d, $24, $1c, $19, $0a, $1b, $14, $15, $0e, $24, $14, $12, $1d, $1d, $22, $24, $11, $0e, $0a, $1f, $0e, $17, $26, $24, $1d, $11, $12, $1c, $24, $12, $1c, $24, $0a, $24, $1d, $0e, $1c, $1d, $24, $0f, $18, $1b, $24, $0d, $22, $17, $0a, $16, $12, $0c, $15, $22, $24, $0a, $15, $15, $18, $0c, $0a, $1d, $0e, $0d, $24, $1c, $19, $1b, $12, $1d, $0e, $1c, $24, $16, $18, $1f, $12, $17, $10, $24, $0a, $1b, $18, $1e, $17, $0d, $24, $18, $17, $24, $1c, $0c, $1b, $0e, $0e, $17, $26
+db $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24,
+db $11, $0e, $15, $18, $26, $24, $1d, $11, $12, $1c, $24, $12, $1c, $24, $0a, $24, $19, $1e, $15, $1c, $0e, $24, $0c, $11, $0a, $17, $17, $0e, $15, $24, $19, $0c, $16, $24, $1d, $0e, $1c, $1d, $26, $24, $19, $1b, $0e, $1c, $1c, $24, $0a, $24, $1d, $18, $24, $16, $0e, $18, $20, $ff
 textEnd:
 db $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, $24, 
 
@@ -22,6 +23,7 @@ SECTION "vars", WRAM0[USER_RAM_START]
 globalTimer: ds 1
 textPtr: ds 1
 spritesDrawnCount: ds 1 ; how many sprites have been drawned in this frame
+lastKeys: ds 1 
 	
 SECTION "start", ROM0
 begin:
@@ -32,7 +34,6 @@ begin:
 	
 	call clearNametable
 	
-	call StartLCD
 	call EnableAudio
 	
 	ld a, %00011011
@@ -44,6 +45,8 @@ begin:
 	ld de, (sampleDataEnd - sampleData)
 	ld hl, sampleData
 	call playSample
+	
+	call StartLCD
 	
 frame:
 stepTxtPtr:
@@ -57,6 +60,30 @@ stepTxtPtr:
 	inc [hl]
 	
 stepTxtPtrDone:
+	call ReadKeys
+	push af
+	
+	; is KEY_A pressed?
+	and KEY_A
+	ld b, a
+	cp 0
+	jp z, :+
+	
+	; is the state of KEY_A different from last frame?
+	ld a, [lastKeys]
+	and KEY_A
+	cp b
+	jp z, :+
+	
+	ld de, (sampleDataEnd - sampleData)
+	ld hl, sampleData
+	call playSample
+:
+
+buttonReadDone:
+	pop af
+	ld [lastKeys], a
+
 	call fillSprites
 	
 	halt
@@ -183,11 +210,17 @@ drawLettersLoopTail:
 ; de: length of sample
 ; hl: pointer to sample
 playSample:
+	; we must turn off vblank interrupt here so that vblank doesnt pop our sound off and clobber our regs
+	ld	a, $00 
+    ld	[rIE], a
+
 	ld a, $f0
 	ld [SOUND_CH1_ENVELOPE], a
+	ld a, %11100000
+	ld [SOUND_CH1_LENGTH], a
 	ld a, $87
 	ld [SOUND_CH1_HIGHFREQ], a
-	ld a, $ff
+	ld a, $fe
 	ld [SOUND_CH1_LOWFREQ], a
 
 	; we will gobble up 380 cpu cycles per sample for a sample rate of 11025
@@ -213,6 +246,9 @@ cycleWaster1:
 	nop
 	nop
 	nop ; + 4 = 366
+	
+	ld a, $87                 
+	ld [SOUND_CH1_HIGHFREQ], a
 	
 	; low nybble is now shifted and put in
 	ld a, [hli]                 ; + 2 = 2
@@ -247,6 +283,9 @@ playSampleLoopTail:
 	ld [SOUND_CH1_HIGHFREQ], a
 	ld a, $00
 	ld [SOUND_CH1_ENVELOPE], a
+
+	ld	a, $01 
+    ld	[rIE], a
 
 	ret
 	
