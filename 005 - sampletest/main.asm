@@ -41,7 +41,9 @@ begin:
 	ld a, %000001111
 	ld [SPRITE_PALETTE_1], a
 	
-	call playSquare
+	ld de, (sampleDataEnd - sampleData)
+	ld hl, sampleData
+	call playSample
 	
 frame:
 stepTxtPtr:
@@ -178,7 +180,9 @@ drawLettersLoopTail:
 	
 	ret
 	
-playSquare:
+; de: length of sample
+; hl: pointer to sample
+playSample:
 	ld a, $f0
 	ld [SOUND_CH1_ENVELOPE], a
 	ld a, $87
@@ -186,37 +190,59 @@ playSquare:
 	ld a, $ff
 	ld [SOUND_CH1_LOWFREQ], a
 
-	ld de, $0800
-playSquareLoop:
+	; we will gobble up 380 cpu cycles per sample for a sample rate of 11025
+playSampleLoop:
+	; reinitiate envelope
+	ld a, $87                   ; + 2 = 2
+	ld [SOUND_CH1_HIGHFREQ], a  ; + 4 = 6
+	
+	; high nybble is masked and put in
+	ld a, [hl]                  ; + 2 = 8
+	and $f0                     ; + 2 = 10
+	ld [SOUND_CH1_ENVELOPE], a  ; + 4 = 14
+	
+	; now we must waste 366 cycles lol
+	ld bc, $0009         ; 3
+cycleWaster1:
+	dec bc               ; + (40 * 2) = 83
+	ld a, b              ; + (40 * 1) = 123
+	or a, c              ; + (40 * 2) = 203
+	jp nz, cycleWaster1  ; + (39 * 4) = 359 + 3 = 362
+	
+	nop
+	nop
+	nop
+	nop ; + 4 = 366
+	
+	; low nybble is now shifted and put in
+	ld a, [hli]                 ; + 2 = 2
+	and $0f                     ; + 2 = 4
+	sla a                       ; + 2 = 6
+	sla a                       ; + 2 = 8
+	sla a                       ; + 2 = 10
+	sla a                       ; + 2 = 12
+	ld [SOUND_CH1_ENVELOPE], a  ; + 4 = 16
 
-	ld a, $87
-	ld [SOUND_CH1_HIGHFREQ], a
-	
-	ld a, e
-	and $08
-	jp z, squareLow
-	
-squareHigh:
-	ld a, $f0
-	ld [SOUND_CH1_ENVELOPE], a
-	jp playSquareLoopTail
-squareLow:
-	ld a, $00
-	ld [SOUND_CH1_ENVELOPE], a
-	
-	; sla a
-	; sla a
-	; sla a
-	; sla a
-	; ld [SOUND_CH1_ENVELOPE], a
-	
-playSquareLoopTail:
+	; now we must to waste 339 cycles (the tail end of the loop wastes some too)
+	ld bc, $0008         ; 3
+cycleWaster2:
+	dec bc               ; + (37 * 2) = 74
+	ld a, b              ; + (37 * 1) = 114
+	or a, c              ; + (37 * 2) = 188
+	jp nz, cycleWaster2  ; + (36 * 4) = 332 + 3 = 335
 
-	dec de
-	ld a, d
-	or a, e
-	jp nz, playSquareLoop
+	nop
+	nop
+	nop
+	nop ; + 4 = 339
 
+playSampleLoopTail:
+	dec de                      ; + 2 =
+	ld a, d                     ; + 1 =
+	or a, e                     ; + 2 =
+	jp nz, playSampleLoop       ; + 4 = 
+
+	; sample playback is now done. lets set the volume back to zero so it doesnt hang
 	ld a, $87
 	ld [SOUND_CH1_HIGHFREQ], a
 	ld a, $00
