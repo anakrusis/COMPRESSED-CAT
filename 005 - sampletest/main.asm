@@ -216,7 +216,7 @@ playSample:
 
 	ld a, $f0
 	ld [SOUND_CH1_ENVELOPE], a
-	ld a, %11100000
+	ld a, %11000000
 	ld [SOUND_CH1_LENGTH], a
 	ld a, $87
 	ld [SOUND_CH1_HIGHFREQ], a
@@ -232,6 +232,8 @@ playSampleLoop:
 	; high nybble is masked and put in
 	ld a, [hl]                  ; + 2 = 8
 	and $f0                     ; + 2 = 10
+	or a, $0f
+	
 	ld [SOUND_CH1_ENVELOPE], a  ; + 4 = 14
 	
 	; now we must waste 366 cycles lol
@@ -257,6 +259,9 @@ cycleWaster1:
 	sla a                       ; + 2 = 8
 	sla a                       ; + 2 = 10
 	sla a                       ; + 2 = 12
+	
+	or a, $0f
+	
 	ld [SOUND_CH1_ENVELOPE], a  ; + 4 = 16
 
 	; now we must to waste 339 cycles (the tail end of the loop wastes some too)
