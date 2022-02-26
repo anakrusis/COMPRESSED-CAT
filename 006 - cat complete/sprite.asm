@@ -19,9 +19,12 @@ drawSprite:
 	inc hl
 	ld [hl], $00 ; flags
 	
+	; tiles between 3a and 52 (inclusive) get the palette 2. otherwise palette 1
 	ld a, d
 	cp $3a
 	jp c, :+
+	cp $53
+	jp nc, :+
 	
 	ld [hl], $10 ; writes object palette 2
 :
@@ -67,34 +70,37 @@ drawSnoot:
 
 ; EYES
 drawEyes:
-	; left eye
+; LEFT EYE
 	ld bc, $2e4d
 	
 	; closed eyes are drawn 5 pixels lower
 	ld a, [animframe_EYE_L]
-	and $06
-	jp z, :+
+	cp $06
+	jp nz, lowerLeftEyeDone
 	
+lowerLeftEye:
 	ld a, c
 	add a, $05
 	ld c, a
-:
+lowerLeftEyeDone:
+
 	ld a, [animframe_EYE_L]
 	ld e, a
 	call drawBigObject
 	
-	; right eye
+; RIGHT EYE
 	ld bc, $584f
 	
 	; ditto
 	ld a, [animframe_EYE_R]
-	and $06
-	jp z, :+
+	cp $07
+	jp nz, lowerRightEyeDone
 	
+lowerRightEye:
 	ld a, c
 	add a, $04
 	ld c, a
-:	
+lowerRightEyeDone:	
 	
 	ld a, [animframe_EYE_R]
 	ld e, a

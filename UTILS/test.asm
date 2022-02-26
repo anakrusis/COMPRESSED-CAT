@@ -21,6 +21,10 @@ ms09:
 db $42, $44, $46, $48, $4A, $FF, 
 ms0A:
 db $4C, $4C, $4E, $50, $52, $FF, 
+ms0B:
+db $54, $56, $58, $FF, 
+ms0C:
+db $5A, $5C, $5E, $FF, 
 
 metaspritePtrs:
-db HIGH(ms00), LOW(ms00), HIGH(ms01), LOW(ms01), HIGH(ms02), LOW(ms02), HIGH(ms03), LOW(ms03), HIGH(ms04), LOW(ms04), HIGH(ms05), LOW(ms05), HIGH(ms06), LOW(ms06), HIGH(ms07), LOW(ms07), HIGH(ms08), LOW(ms08), HIGH(ms09), LOW(ms09), HIGH(ms0A), LOW(ms0A), 
+db HIGH(ms00), LOW(ms00), HIGH(ms01), LOW(ms01), HIGH(ms02), LOW(ms02), HIGH(ms03), LOW(ms03), HIGH(ms04), LOW(ms04), HIGH(ms05), LOW(ms05), HIGH(ms06), LOW(ms06), HIGH(ms07), LOW(ms07), HIGH(ms08), LOW(ms08), HIGH(ms09), LOW(ms09), HIGH(ms0A), LOW(ms0A), HIGH(ms0B), LOW(ms0B), HIGH(ms0C), LOW(ms0C), 

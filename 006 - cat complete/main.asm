@@ -4,6 +4,8 @@ ROM_SIZE EQU 0
 RAM_SIZE EQU 0
 GBC_SUPPORT EQU 1
 
+SAMPLE_COUNT EQU 2
+
 ; Macro for copying a rectangular region into VRAM
 ; Changes ALL registers
 ; Arguments:
@@ -64,18 +66,22 @@ ms09:
 db $42, $44, $46, $48, $4A, $FF, 
 ms0A:
 db $4C, $4C, $4E, $50, $52, $FF, 
+ms0B:
+db $54, $56, $58, $FF, 
+ms0C:
+db $5A, $5C, $5E, $FF, 
 
 metaspritePtrs:
-db HIGH(ms00), LOW(ms00), HIGH(ms01), LOW(ms01), HIGH(ms02), LOW(ms02), HIGH(ms03), LOW(ms03), HIGH(ms04), LOW(ms04), HIGH(ms05), LOW(ms05), HIGH(ms06), LOW(ms06), HIGH(ms07), LOW(ms07), HIGH(ms08), LOW(ms08), HIGH(ms09), LOW(ms09), HIGH(ms0A), LOW(ms0A), 
+db HIGH(ms00), LOW(ms00), HIGH(ms01), LOW(ms01), HIGH(ms02), LOW(ms02), HIGH(ms03), LOW(ms03), HIGH(ms04), LOW(ms04), HIGH(ms05), LOW(ms05), HIGH(ms06), LOW(ms06), HIGH(ms07), LOW(ms07), HIGH(ms08), LOW(ms08), HIGH(ms09), LOW(ms09), HIGH(ms0A), LOW(ms0A), HIGH(ms0B), LOW(ms0B), HIGH(ms0C), LOW(ms0C), 
 
 db $ff, $ff
 bgPalette:
 db $00, $00, $06, $18, $3e, $f8, $ff, $ff
 
 samplePtrs:
-db HIGH(data_meow1), LOW(data_meow1), HIGH(data_meow2), LOW(data_meow2), HIGH(data_meow3), LOW(data_meow3)
+db HIGH(data_meow1), LOW(data_meow1), HIGH(data_meow2), LOW(data_meow2), ;HIGH(data_meow3), LOW(data_meow3)
 sampleLengths:
-db HIGH(end_meow1 - data_meow1), LOW(end_meow1 - data_meow1), HIGH(end_meow2 - data_meow2), LOW(end_meow2 - data_meow2), HIGH(end_meow3 - data_meow3), LOW(end_meow3 - data_meow3)
+db HIGH(end_meow1 - data_meow1), LOW(end_meow1 - data_meow1), HIGH(end_meow2 - data_meow2), LOW(end_meow2 - data_meow2), ;HIGH(end_meow3 - data_meow3), LOW(end_meow3 - data_meow3)
 
 SECTION "vars", WRAM0[USER_RAM_START]
 temp1: ds 1
@@ -106,8 +112,14 @@ earTwitchTimer:        ds 1
 betweenEarTwitchTimer: ds 2
 earTwitching:          ds 1
 
+; cant count during sample playback but immediately starts counting up when sample starts playing
+betweenMeowTimer: ds 2
 ; counts up starting at 1, then 2, then 3, and then back to 1
 meowCounter: ds 1
+; a different meow counter that increments but doesnt loop back, it is used for very diferent purposes
+meowCounterForAnger: ds 1
+; how long to remain in the grumpy state before resetting the meowCounterForAnger
+grumpyTimer: ds 2
 
 ; normally zero, but if a sample is queued next frame, we will play the sample of that index
 sampleQueue: ds 1
@@ -198,12 +210,18 @@ frame:
 sampleQueueHandle:
 	ld a, [sampleQueue]
 	cp 0
-	jp z, :+
+	jp z, sampleQueueHandleDone
+	
+	; set betweenMeowTimer to zero
+	ld a, 0
+	ld [betweenMeowTimer], a
+	ld [betweenMeowTimer + 1], a
 
 	; load sample length pointer
 	ld d, 0
 	ld a, [meowCounter]
 	ld e, a
+	dec e ; minus 1 because meowCounter ranges from 1-3 and pointers from 0-2
 	sla e
 	ld hl, sampleLengths
 	add hl, de
@@ -218,6 +236,7 @@ sampleQueueHandle:
 	ld b, 0
 	ld a, [meowCounter]
 	ld c, a
+	dec c ; ditto as above
 	sla c
 	ld hl, samplePtrs
 	add hl, bc
@@ -247,17 +266,31 @@ sampleQueueHandle:
 	xor $06
 	ld [animframe_SNOOT_B], a
 	
+	; increment meow counter for the annoyed grouchy cat reaction
+	ld a, [meowCounterForAnger]
+	inc a
+	ld [meowCounterForAnger], a
+	
+	; if you reach the fifth meow in a row, the cat will blink in a bit, to transition to the next eye anim
+	cp 5
+	jp nz, noBlinkAfterMeow
+	ld a, $05
+	ld [betweenBlinkTimer], a
+	
+noBlinkAfterMeow:
+	
+	; increment meow counter for sample purposes
 	ld a, [meowCounter]
 	inc a
 	ld [meowCounter], a
-	cp 4
-	jp nz, :+
+	cp SAMPLE_COUNT + 1
+	jp nz, sampleQueueHandleDone
 
 	; if the meowcounter is 4 then set it back to 1
 	ld a, 1
 	ld [meowCounter], a
 	
-:
+sampleQueueHandleDone:
 ; stepTxtPtr:
 	; ld hl, globalTimer
 	; inc [hl]
@@ -298,52 +331,119 @@ sampleQueueHandle:
 	ld a, 1
 	ld [sampleQueue], a
 :
-
 buttonReadDone:
 	pop af
 	ld [lastKeys], a
+	
+; GRUMPY HANDLING!!!!
+	; ld a, [meowCounterForAnger]
+	; cp 5
+	; jp c, grumpyHandlerDone 
+; grumpyHandler:
+	; ld hl, grumpyTimer
+	; ld a, [hl]
+	; ld e, a
+	; inc hl
+	; ld a, [hl]
+	; ld d, a
+	; dec hl
+	
+	; inc de
+
+	; ld [hl], e
+	; inc hl
+	; ld [hl], d
+	
+	; ; compare the high byte to $02 (512 ticks)
+	; ld a, d
+	; cp $02
+	; jp c, grumpyHandlerDone
+
+	; ; if grumpyTimer exceeds 512 ticks then reset it back to zero
+	; ld a, 0
+	; ld [meowCounterForAnger], a
+	; ld [grumpyTimer], a
+	; ld [grumpyTimer + 1], a
+
+; grumpyHandlerDone:
+
+betweenMeowHandler:
+	ld hl, betweenMeowTimer
+	ld a, [hl]
+	ld e, a
+	inc hl
+	ld a, [hl]
+	ld d, a
+	dec hl
+	
+	inc de
+
+	ld [hl], e
+	inc hl
+	ld [hl], d
+	
+	ld a, d
+	cp $02
+	jp c, betweenMeowHandlerDone
+	
+	; if betweenMeowTimer exceeds 512 ticks then cat is no longer grumpy, if it was, and meow counter resets
+	ld a, 0
+	ld [meowCounterForAnger], a
+	ld [grumpyTimer], a
+	ld [grumpyTimer + 1], a
+	
+betweenMeowHandlerDone:
 
 ;
 ; EYE BLINKING HANDLING!!!!!!!!!!
 ;	
 	ld hl, blinkTimer
 	dec [hl]
-	jp nz, handleBlinkDone
+	jp nz, handleAfterBlinkDone
 	
-handleBlink:
+handleAfterBlink:
 ; ends the blink here
+	; (setting up timer for the interval between blinks)
 	call rnJesus
 	ld [betweenBlinkTimer], a
 	
-	; ; flips between metasprites 00 and 06
-	ld a, [animframe_EYE_L]
-	xor $06
+	; if the meow counter for anger is 5 or greater, then we will use grumpy eyes
+	; otherwise normal eyes
+	ld a, [meowCounterForAnger]
+	cp 5
+	jp nc, afterBlinkSetGrumpyEyes
+	
+afterBlinkSetNormalEyes:
+	ld a, $00
 	ld [animframe_EYE_L], a
-	; flips between metasprites 01 and 07
-	ld a, [animframe_EYE_R]
-	xor $06
+	ld a, $01
+	ld [animframe_EYE_R], a	
+	jp handleAfterBlinkDone
+	
+afterBlinkSetGrumpyEyes:
+	ld a, $0b
+	ld [animframe_EYE_L], a
+	ld a, $0c
 	ld [animframe_EYE_R], a	
 	
-handleBlinkDone:
+handleAfterBlinkDone:
 	ld hl, betweenBlinkTimer
 	dec [hl]
-	jp nz, handleBetweenBlinkDone
+	jp nz, handleDuringBlinkDone
 	
-handleBetweenBlink:
-; initiates a new blink here
+handleDuringBlink:
+; blink lasts for 8 frames
 	ld a, 8
 	ld [blinkTimer], a
 	
-	; ; flips between metasprites 00 and 06
-	ld a, [animframe_EYE_L]
-	xor $06
+	; 06 = left eye closed 
+	ld a, $06
 	ld [animframe_EYE_L], a
-	; flips between metasprites 01 and 07
-	ld a, [animframe_EYE_R]
-	xor $06
+	; 07 = right eye closed
+	ld a, $07
 	ld [animframe_EYE_R], a	
 	
-handleBetweenBlinkDone:
+handleDuringBlinkDone:
 
 ;
 ; EAR TWITCHING HANDLING!!!!!!!!!!
@@ -419,8 +519,21 @@ handleBetweenTwitchDone:
 	ld [animframe_EAR_M], a
 	ld a, $0a
 	ld [animframe_EAR_B], a
+decideEarFramesDone:	
+handleBetweenMeow:
+	ld hl, betweenMeowTimer
+	; puts the value of betweenMeowTimer in de without affecting hl
+	ld e, [hl]
+	inc hl
+	ld d, [hl]
+	dec hl
+	; 16-bit decrements and puts back in place still pointed at hl
+	inc de
+	ld [hl], e
+	inc hl
+	ld [hl], d
 
-decideEarFramesDone:
+handleBetweenMeowTimer:
 
 	call fillSprites
 	
@@ -551,5 +664,5 @@ playSampleLoopTail:
 	
 INCLUDE "sample_meow1.asm"
 INCLUDE "sample_meow2.asm"
-INCLUDE "sample_meow3.asm"
+;INCLUDE "sample_meow3.asm"
 INCLUDE "sprite.asm"
