@@ -6,6 +6,7 @@ GBC_SUPPORT EQU 1
 
 SAMPLE_COUNT EQU 3
 FADE_TIME EQU 64
+MEOW_COUNT_TO_ANGER EQU 8
 
 ; Macro for copying a rectangular region into VRAM
 ; Changes ALL registers
@@ -79,9 +80,17 @@ ms0B:
 db $54, $56, $58, $FF, 
 ms0C:
 db $5A, $5C, $5E, $FF, 
+ms0D:
+db $0C, $0E, $10, $60, $62, $FF, 
+ms0E:
+db $16, $18, $1A, $1C, $1E, $FF, 
+ms0F:
+db $64, $66, $68, $6A, $6C, $FF, 
+ms10:
+db $6E, $70, $72, $74, $2C, $FF, 
 
 metaspritePtrs:
-db HIGH(ms00), LOW(ms00), HIGH(ms01), LOW(ms01), HIGH(ms02), LOW(ms02), HIGH(ms03), LOW(ms03), HIGH(ms04), LOW(ms04), HIGH(ms05), LOW(ms05), HIGH(ms06), LOW(ms06), HIGH(ms07), LOW(ms07), HIGH(ms08), LOW(ms08), HIGH(ms09), LOW(ms09), HIGH(ms0A), LOW(ms0A), HIGH(ms0B), LOW(ms0B), HIGH(ms0C), LOW(ms0C), 
+db HIGH(ms00), LOW(ms00), HIGH(ms01), LOW(ms01), HIGH(ms02), LOW(ms02), HIGH(ms03), LOW(ms03), HIGH(ms04), LOW(ms04), HIGH(ms05), LOW(ms05), HIGH(ms06), LOW(ms06), HIGH(ms07), LOW(ms07), HIGH(ms08), LOW(ms08), HIGH(ms09), LOW(ms09), HIGH(ms0A), LOW(ms0A), HIGH(ms0B), LOW(ms0B), HIGH(ms0C), LOW(ms0C), HIGH(ms0D), LOW(ms0D), HIGH(ms0E), LOW(ms0E), HIGH(ms0F), LOW(ms0F), HIGH(ms10), LOW(ms10), 
 
 db $ff, $ff
 bgPalette:
@@ -143,7 +152,7 @@ screenState:           ds 1
 	
 SECTION "start", ROM0
 begin:
-	call creditScreen
+	call catScreen
 	
 	; gbc background palette
 	ld a, $80
@@ -272,7 +281,21 @@ sampleQueueHandle:
 	ld a, 0
 	ld [betweenMeowTimer], a
 	ld [betweenMeowTimer + 1], a
+	; clears sample queue after finished playing
+	ld a, 0
+	ld [sampleQueue], a
 
+	; if the cat is currently grumpy then a hiss routine will be executed
+	; otherwise we will do all of this calculation to get the pointer to the sample, and then play the sample
+	ld a, [meowCounterForAnger]
+	cp MEOW_COUNT_TO_ANGER
+	jp c, loadSample
+	
+loadHiss:	
+	call playHiss
+	jp sampleQueueHandleDone
+
+loadSample:
 	; load sample length pointer
 	ld d, 0
 	ld a, [meowCounter]
@@ -308,33 +331,18 @@ sampleQueueHandle:
 	ld l, c
 	call playSample
 	
-	; clears sample queue after finished playing
-	ld a, 0
-	ld [sampleQueue], a
-	
-	; Snoot closes when sample is finished playing
-	; flips between metasprites 02 and 04
-	ld a, [animframe_SNOOT_T]
-	xor $06
-	ld [animframe_SNOOT_T], a
-	; flips between metasprites 03 and 05
-	ld a, [animframe_SNOOT_B]
-	xor $06
-	ld [animframe_SNOOT_B], a
-	
 	; increment meow counter for the annoyed grouchy cat reaction
 	ld a, [meowCounterForAnger]
 	inc a
 	ld [meowCounterForAnger], a
 	
-	; if you reach the fifth meow in a row, the cat will blink in a bit, to transition to the next eye anim
-	cp 5
+	; if you reach the eighth meow in a row, the cat will blink in a bit, to transition to the next eye anim
+	cp MEOW_COUNT_TO_ANGER
 	jp nz, noBlinkAfterMeow
 	ld a, $05
 	ld [betweenBlinkTimer], a
 	
 noBlinkAfterMeow:
-	
 	; increment meow counter for sample purposes
 	ld a, [meowCounter]
 	inc a
@@ -380,14 +388,14 @@ sampleQueueHandleDone:
 	cp 0
 	jp nz, :+
 	
-	; flips between metasprites 02 and 04
-	ld a, [animframe_SNOOT_T]
-	xor $06
-	ld [animframe_SNOOT_T], a
-	; flips between metasprites 03 and 05
-	ld a, [animframe_SNOOT_B]
-	xor $06
-	ld [animframe_SNOOT_B], a
+	; ; flips between metasprites 02 and 04
+	; ld a, [animframe_SNOOT_T]
+	; xor $06
+	; ld [animframe_SNOOT_T], a
+	; ; flips between metasprites 03 and 05
+	; ld a, [animframe_SNOOT_B]
+	; xor $06
+	; ld [animframe_SNOOT_B], a
 	
 	; sample 1 queued to play on the next frame (after oam dma has updated the sprites)
 	ld a, 1
@@ -481,6 +489,47 @@ betweenMeowHandler:
 	ld [grumpyTimer + 1], a
 	
 betweenMeowHandlerDone:
+decideSnootFrame:
+	ld a, [meowCounterForAnger]
+	cp MEOW_COUNT_TO_ANGER
+	jp nc, grumpySnoot
+	
+	ld a, [sampleQueue]
+	cp 0
+	jp z, closedSnoot
+	
+normalSnoot:
+	ld a, $04
+	ld [animframe_SNOOT_T], a
+	ld a, $05
+	ld [animframe_SNOOT_B], a
+	jp decideSnootFrameDone
+
+grumpySnoot:
+	ld a, [sampleQueue]
+	cp 0
+	jp nz, hissSnoot
+
+	ld a, $0d
+	ld [animframe_SNOOT_T], a
+	ld a, $0e
+	ld [animframe_SNOOT_B], a
+	jp decideSnootFrameDone
+	
+hissSnoot:
+	ld a, $0f
+	ld [animframe_SNOOT_T], a
+	ld a, $10
+	ld [animframe_SNOOT_B], a
+	jp decideSnootFrameDone
+	
+closedSnoot:
+	ld a, $02
+	ld [animframe_SNOOT_T], a
+	ld a, $03
+	ld [animframe_SNOOT_B], a
+	
+decideSnootFrameDone:
 
 ;
 ; EYE BLINKING HANDLING!!!!!!!!!!
@@ -495,10 +544,10 @@ handleAfterBlink:
 	call rnJesus
 	ld [betweenBlinkTimer], a
 	
-	; if the meow counter for anger is 5 or greater, then we will use grumpy eyes
+	; if the meow counter for anger is 8 or greater, then we will use grumpy eyes
 	; otherwise normal eyes
 	ld a, [meowCounterForAnger]
-	cp 5
+	cp MEOW_COUNT_TO_ANGER
 	jp nc, afterBlinkSetGrumpyEyes
 	
 afterBlinkSetNormalEyes:
@@ -701,6 +750,17 @@ creditScreen:
 	
 	CopyRegionToVRAM 7, 15, creditsTilemap, BACKGROUND_MAPDATA_START + 128 + 2	
 
+	ret
+	
+playHiss:
+	ld a, 63
+	ld [SOUND_CH4_LENGTH], a
+	
+	ld a, %10000000
+	ld [SOUND_CH4_ENVELOPE], a
+	
+	ld a, %11000000
+	ld [SOUND_CH4_OPTIONS], a
 	ret
 
 ; de: length of sample
