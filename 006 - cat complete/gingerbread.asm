@@ -9,7 +9,7 @@
 
 ; Before importing gingerbread.asm, you can specify the following options to affect the game header
 IF !DEF(GAME_NAME)
-GAME_NAME EQUS "GINGERBREAD"
+GAME_NAME EQUS "COMPRESSEDCAT"
 ENDC
 
 IF !DEF(GBC_SUPPORT)

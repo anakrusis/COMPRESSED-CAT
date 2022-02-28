@@ -375,6 +375,11 @@ sampleQueueHandleDone:
 	cp b
 	jp z, :+
 	
+	; can't meow on the credits screen
+	ld a, [screenState]
+	cp 0
+	jp nz, :+
+	
 	; flips between metasprites 02 and 04
 	ld a, [animframe_SNOOT_T]
 	xor $06
@@ -400,6 +405,10 @@ sampleQueueHandleDone:
 	and KEY_SELECT
 	cp b
 	jp z, :+
+	
+	ld a, [fadeTimer]
+	cp 0
+	jp nz, :+
 	
 	ld a, FADE_TIME
 	ld [fadeTimer], a
@@ -441,6 +450,11 @@ buttonReadDone:
 
 ; grumpyHandlerDone:
 
+catHandler:
+	ld a, [screenState]
+	cp 0
+	jp nz, catHandlerDone
+	
 betweenMeowHandler:
 	ld hl, betweenMeowTimer
 	ld a, [hl]
@@ -608,7 +622,7 @@ handleBetweenMeow:
 	ld [hl], d
 
 handleBetweenMeowTimer:
-
+catHandlerDone:
 	call fillSprites
 	
 	halt
@@ -620,7 +634,7 @@ clearNametable:
 	ld bc, $0400
 	ld hl, BACKGROUND_MAPDATA_START
 clearNametableLoop:
-	ld a, $2f
+	ld a, $87
 	ld [hli], a
 	dec bc
 	; checking 
