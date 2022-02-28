@@ -50,6 +50,13 @@ allSpritesOffscreenLoop:
 	dec b
 	jp nz, allSpritesOffscreenLoop
 
+; IF The screen state is 1 (credits screen) then no sprites show up
+	ld a, [screenState]
+	cp 0
+	jp z, drawSnoot
+	
+	ret
+
 ; SNOUT
 drawSnoot:	
 	ld bc, $385f

@@ -1,10 +1,11 @@
 SECTION "Includes@home",ROM0
 
-ROM_SIZE EQU 0 
+ROM_SIZE EQU 1 
 RAM_SIZE EQU 0
 GBC_SUPPORT EQU 1
 
-SAMPLE_COUNT EQU 2
+SAMPLE_COUNT EQU 3
+FADE_TIME EQU 64
 
 ; Macro for copying a rectangular region into VRAM
 ; Changes ALL registers
@@ -36,12 +37,20 @@ testchr:
 INCBIN "test.chr"
 testchrEnd:
 
+textchr:
+INCBIN "text.chr"
+textchrEnd:
+
 INCLUDE "gingerbread.asm"
 
 SECTION "data",ROM0, ALIGN[8]
 tilemap:
 db $80, $80, $80, $81, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $80, $82, $83, $84, $80, $80, $80, $80, $80, $80, $80, $85, $86, $87, $80, $80, $80, $80, $80, $80, $80, $88, $89, $8A, $8B, $80, $80, $80, $80, $80, $8C, $8D, $8E, $8F, $80, $80, $80, $80, $80, $80, $80, $90, $91, $92, $93, $94, $80, $95, $96, $97, $98, $99, $9A, $80, $80, $80, $80, $80, $80, $80, $9B, $9C, $9D, $9E, $9F, $A0, $A1, $A2, $A3, $A4, $A5, $84, $A6, $80, $80, $80, $80, $80, $80, $80, $A7, $A8, $A9, $AA, $9F, $AB, $AC, $AD, $AE, $9F, $AF, $B0, $B1, $80, $80, $80, $80, $80, $80, $80, $80, $80, $B2, $9F, $B3, $B4, $B5, $B6, $B7, $9F, $9F, $B8, $B9, $95, $80, $80, $80, $80, $80, $80, $80, $80, $BA, $9F, $BB, $BC, $9F, $BD, $BE, $9F, $9F, $9F, $BF, $C0, $80, $80, $80, $80, $80, $80, $80, $C1, $C2, $C3, $9F, $9F, $9F, $C4, $9F, $9F, $C5, $C6, $C7, $C8, $80, $80, $80, $80, $80, $80, $80, $C9, $CA, $9F, $9F, $9F, $9F, $9F, $9F, $9F, $CB, $CC, $CD, $CE, $80, $80, $80, $80, $80, $80, $80, $CF, $D0, $9F, $9F, $9F, $9F, $9F, $9F, $9F, $9F, $D1, $D2, $D3, $80, $80, $80, $80, $80, $80, $80, $D4, $D5, $D6, $9F, $9F, $9F, $9F, $9F, $9F, $D7, $D8, $D9, $DA, $80, $80, $80, $80, $80, $80, $80, $DB, $DC, $DD, $DE, $9F, $9F, $9F, $9F, $9F, $DF, $E0, $E1, $E2, $E3, $80, $80, $80, $80, $80, $80, $E4, $E5, $E6, $E7, $9F, $9F, $9F, $9F, $9F, $E8, $E9, $EA, $EB, $EC, $ED, $EE, $80, $80, $80, $80, $80, $EF, $F0, $9F, $9F, $9F, $9F, $9F, $9F, $F1, $9F, $F2, $F3, $F4, $F5, $80, $80, $80, $80, $80, $80, $F6, $F7, $9F, $9F, $9F, $9F, $9F, $9F, $9F, $F8, $F9, $FA, $FB, $FC, $FD, $80, $80, $80, $80, $FE, $FF, $00, $9F, $9F, $9F, $9F, $9F, $9F, $9F, $01, $9F, $02, $03, $9F, $04, $80, $80, $80, $80, $80, $05, $06, $07, $9F, $9F, $9F, $9F, $08, $09, $0A, $9F, $0B, $9F, $9F, $0C, $80, 
 tilemapEnd:
+
+creditsTilemap:
+db $80, $81, $82, $83, $84, $85, $86, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $88, $89, $81, $8A, $8B, $8C, $83, $8D, $81, $8E, $88, $8F, $90, $90, $91, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $82, $81, $80, $92, $93, $90, $8A, $8E, $94, $95, $83, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $87, $81, $80, $92, $80, $92, $93, $81, $93, $81, $87, $87, $87, $87, $87, $87, 
+creditsTilemapEnd:
 
 metasprites:
 ms00:
@@ -78,10 +87,16 @@ db $ff, $ff
 bgPalette:
 db $00, $00, $06, $18, $3e, $f8, $ff, $ff
 
+fadePalettes:
+db %00011011, %00000110, %00000001, %00000000, %00000000, %00000001, %00000110, %00011011, %00011011
+
+spriteFadePalettes:
+db %00101111, %00011010, %00000101, %00000000, %00000000, %00000101, %00011010, %00101111, %00101111
+
 samplePtrs:
-db HIGH(data_meow1), LOW(data_meow1), HIGH(data_meow2), LOW(data_meow2), ;HIGH(data_meow3), LOW(data_meow3)
+db HIGH(data_meow1), LOW(data_meow1), HIGH(data_meow2), LOW(data_meow2), HIGH(data_meow3), LOW(data_meow3)
 sampleLengths:
-db HIGH(end_meow1 - data_meow1), LOW(end_meow1 - data_meow1), HIGH(end_meow2 - data_meow2), LOW(end_meow2 - data_meow2), ;HIGH(end_meow3 - data_meow3), LOW(end_meow3 - data_meow3)
+db HIGH(end_meow1 - data_meow1), LOW(end_meow1 - data_meow1), HIGH(end_meow2 - data_meow2), LOW(end_meow2 - data_meow2), HIGH(end_meow3 - data_meow3), LOW(end_meow3 - data_meow3)
 
 SECTION "vars", WRAM0[USER_RAM_START]
 temp1: ds 1
@@ -111,34 +126,24 @@ earTwitchTimer:        ds 1
 ; we initialise it on startup to a high number like 3600
 betweenEarTwitchTimer: ds 2
 earTwitching:          ds 1
-
+fadeTimer:             ds 1
 ; cant count during sample playback but immediately starts counting up when sample starts playing
-betweenMeowTimer: ds 2
+betweenMeowTimer:      ds 2
 ; counts up starting at 1, then 2, then 3, and then back to 1
-meowCounter: ds 1
+meowCounter:           ds 1
 ; a different meow counter that increments but doesnt loop back, it is used for very diferent purposes
-meowCounterForAnger: ds 1
+meowCounterForAnger:   ds 1
 ; how long to remain in the grumpy state before resetting the meowCounterForAnger
-grumpyTimer: ds 2
+grumpyTimer:           ds 2
 
 ; normally zero, but if a sample is queued next frame, we will play the sample of that index
-sampleQueue: ds 1
+sampleQueue:           ds 1
+; 0 = main screen, 1 = credits screen
+screenState:           ds 1
 	
 SECTION "start", ROM0
 begin:
-	ld hl, funtus
-	ld de, TILEDATA_START
-	ld bc, funtusEnd - funtus
-	call mCopyVRAM
-	
-	call clearNametable
-	
-	ld hl, testchr
-    ld de, $8800
-    ld bc, testchrEnd - testchr
-    call mCopyVRAM
-	
-	CopyRegionToVRAM 18, 20, tilemap, BACKGROUND_MAPDATA_START
+	call creditScreen
 	
 	; gbc background palette
 	ld a, $80
@@ -206,6 +211,57 @@ gbcPaletteLoop2:
 	ld [meowCounter], a
 	
 frame:
+fadeHandler:
+	ld a, [fadeTimer]
+	push af
+	; pointer into fade table
+	srl a
+	srl a
+	srl a
+	ld b, 0
+	ld c, a
+	
+	ld hl, fadePalettes
+	add hl, bc
+	ld a, [hl]
+	ld [BG_PALETTE], a
+	
+	ld hl, spriteFadePalettes
+	add hl, bc
+	ld a, [hl]
+	ld [SPRITE_PALETTE_1], a
+	
+	pop af
+	cp 0
+	jp z, fadeHandlerDone
+	
+	cp FADE_TIME/2
+	jp z, screentransition
+	
+	dec a
+	ld [fadeTimer], a
+	jp fadeHandlerDone
+	
+screentransition:
+	dec a
+	ld [fadeTimer], a
+	
+	call StopLCD
+	
+	ld a, [screenState]
+	cp 0
+	jp nz, catbutton
+
+creditbutton:	
+	call creditScreen
+	call StartLCD
+	jp fadeHandlerDone	
+catbutton:
+	call catScreen
+	call StartLCD
+	
+fadeHandlerDone:
+
 ; plays samples if the sample queue is not 0
 sampleQueueHandle:
 	ld a, [sampleQueue]
@@ -305,8 +361,9 @@ sampleQueueHandleDone:
 	
 	call ReadKeys
 	push af
+	push af
 	
-	; is KEY_A pressed?
+; A BUTTON 
 	and KEY_A
 	ld b, a
 	cp 0
@@ -330,6 +387,23 @@ sampleQueueHandleDone:
 	; sample 1 queued to play on the next frame (after oam dma has updated the sprites)
 	ld a, 1
 	ld [sampleQueue], a
+:
+
+; SELECT BUTTON
+	pop af
+	and KEY_SELECT
+	ld b, a
+	cp 0
+	jp z, :+
+	
+	ld a, [lastKeys]
+	and KEY_SELECT
+	cp b
+	jp z, :+
+	
+	ld a, FADE_TIME
+	ld [fadeTimer], a
+	
 :
 buttonReadDone:
 	pop af
@@ -574,7 +648,47 @@ rnJesus2:
 	ld [seed], a
 	cp 0
 	ret
+
+SECTION "secondbank", ROMX, BANK[1]
+
+catScreen:
+	ld a, 0
+	ld [screenState], a
+
+	; loads sprite tiles
+	ld hl, funtus
+	ld de, TILEDATA_START
+	ld bc, funtusEnd - funtus
+	call mCopyVRAM
 	
+	call clearNametable
+	
+	; loads background tiles
+	ld hl, testchr
+    ld de, $8800
+    ld bc, testchrEnd - testchr
+    call mCopyVRAM
+	
+	CopyRegionToVRAM 18, 20, tilemap, BACKGROUND_MAPDATA_START
+	
+	ret
+	
+creditScreen:
+	ld a, 1
+	ld [screenState], a
+
+	call clearNametable
+	
+	; loads background tiles
+	ld hl, textchr
+    ld de, $8800
+    ld bc, textchrEnd - textchr
+    call mCopyVRAM
+	
+	CopyRegionToVRAM 7, 15, creditsTilemap, BACKGROUND_MAPDATA_START + 128 + 2	
+
+	ret
+
 ; de: length of sample
 ; hl: pointer to sample
 playSample:
@@ -661,8 +775,8 @@ playSampleLoopTail:
     ld	[rIE], a
 
 	ret
-	
+
 INCLUDE "sample_meow1.asm"
 INCLUDE "sample_meow2.asm"
-;INCLUDE "sample_meow3.asm"
+INCLUDE "sample_meow3.asm"
 INCLUDE "sprite.asm"
