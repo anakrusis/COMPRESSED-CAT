@@ -6,6 +6,7 @@ GBC_SUPPORT EQU 1
 
 SAMPLE_COUNT EQU 3
 FADE_TIME EQU 64
+HISS_TIME EQU 5
 MEOW_COUNT_TO_ANGER EQU 8
 
 ; Macro for copying a rectangular region into VRAM
@@ -144,6 +145,7 @@ meowCounter:           ds 1
 meowCounterForAnger:   ds 1
 ; how long to remain in the grumpy state before resetting the meowCounterForAnger
 grumpyTimer:           ds 2
+hissTimer:             ds 1
 
 ; normally zero, but if a sample is queued next frame, we will play the sample of that index
 sampleQueue:           ds 1
@@ -293,6 +295,10 @@ sampleQueueHandle:
 	
 loadHiss:	
 	call playHiss
+	
+	ld a, HISS_TIME
+	ld [hissTimer], a
+	
 	jp sampleQueueHandleDone
 
 loadSample:
@@ -356,8 +362,8 @@ noBlinkAfterMeow:
 	
 sampleQueueHandleDone:
 ; stepTxtPtr:
-	; ld hl, globalTimer
-	; inc [hl]
+	ld hl, globalTimer
+	inc [hl]
 	; ld a, [hl]
 	; and a, $07
 	; jp nz, stepTxtPtrDone
@@ -458,6 +464,29 @@ buttonReadDone:
 
 ; grumpyHandlerDone:
 
+hissHandler:
+	ld a, [globalTimer]
+	and $0f
+	cp 0
+	jp nz, hissHandlerDone
+
+	ld a, [hissTimer]
+	cp 0
+	jp z, hissHandlerDone
+	
+	dec a
+	ld [hissTimer], a
+	
+	sla a
+	sla a
+	sla a
+	sla a
+	ld [$ff21], a
+	ld a, $80
+	ld [$ff23], a
+	
+hissHandlerDone:
+
 catHandler:
 	ld a, [screenState]
 	cp 0
@@ -507,6 +536,10 @@ normalSnoot:
 
 grumpySnoot:
 	ld a, [sampleQueue]
+	cp 0
+	jp nz, hissSnoot
+	
+	ld a, [hissTimer]
 	cp 0
 	jp nz, hissSnoot
 
@@ -753,14 +786,22 @@ creditScreen:
 	ret
 	
 playHiss:
-	ld a, 63
+	ld a, $41
 	ld [SOUND_CH4_LENGTH], a
-	
-	ld a, %10000000
+	ld a, $67
 	ld [SOUND_CH4_ENVELOPE], a
+	ld a, $4f
+	ld [$ff22], a
+	ld a, $80
+	ld [$ff23], a
 	
-	ld a, %11000000
-	ld [SOUND_CH4_OPTIONS], a
+	ld a, $77
+	ld [$ff24], a
+	ld a, $ff
+	ld [$ff25], a
+	ld a, $80
+	ld [$ff26], a
+	
 	ret
 
 ; de: length of sample
