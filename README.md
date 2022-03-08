@@ -1,5 +1,7 @@
 # [COMPRESSED CAT]
 
+![image](displayphoto.png)
+
 [COMPRESSED CAT] is an interactive art project programmed for the Gameboy in assembly code. The purpose of this piece
 was to create a piece of art that people could interact with. It is intended to explore the line between games and
 standalone visual art. There is no goal, simply interact and observe by pressing A. Press Select to view the credits screen.
